@@ -134,12 +134,28 @@ class Command(BaseCommand):
                 
         elif file_ext == '.csv':
             try:
-                with open(file_path, 'r', encoding='utf-8') as csv_file:
-                    reader = csv.DictReader(csv_file)
-                    for row in reader:
-                        # Convert types for CSV data
-                        offer = self._convert_csv_types(row)
-                        offers_to_import.append(offer)
+                with open(file_path, 'r', encoding='utf-8') as csvfile:
+                    csv_reader = csv.DictReader(csvfile)
+                    for row in csv_reader:
+                        offer = {}
+                        for key, value in row.items():
+                            if value:  # Skip empty values
+                                # Handle type conversions
+                                if key in ['usage_limit', 'usage_count']:
+                                    try:
+                                        offer[key] = int(value)
+                                    except ValueError:
+                                        offer[key] = 0
+                                elif key == 'price' and value.replace('.', '', 1).isdigit():
+                                    offer[key] = float(value)
+                                elif key == 'category' and ',' in value:
+                                    # Handle comma-separated categories
+                                    offer[key] = [cat.strip() for cat in value.split(',')]
+                                else:
+                                    offer[key] = value
+                        
+                        if offer:
+                            offers_to_import.append(offer)
             except Exception as e:
                 raise CommandError(f'Error reading CSV file: {str(e)}')
         else:
@@ -159,16 +175,16 @@ class Command(BaseCommand):
             
             if not is_valid:
                 invalid_count += 1
-                errors.append(f"Invalid offer {offer.get('code', 'unknown')}: {error}")
+                errors.append(f"Invalid offer {offer.get('coupon_code', 'unknown')}: {error}")
                 continue
             
             # Check if offer already exists
-            existing_offer = Coupon.get_by_code(offer['code'])
+            existing_offer = Coupon.get_by_code(offer['coupon_code'])
             
             if existing_offer:
                 if update_existing:
                     # Update existing offer
-                    Coupon.update_one({'code': offer['code']}, offer)
+                    Coupon.update_one({'coupon_code': offer['coupon_code']}, offer)
                     updated_count += 1
                     valid_count += 1
                 else:
@@ -206,7 +222,7 @@ class Command(BaseCommand):
             
         if code:
             # Remove specific offer by code
-            result = collection.delete_one({'code': code})
+            result = collection.delete_one({'coupon_code': code})
             if result.deleted_count > 0:
                 self.stdout.write(self.style.SUCCESS(f'Removed offer with code: {code}'))
             else:
@@ -216,7 +232,7 @@ class Command(BaseCommand):
             # Remove all expired offers
             current_date = datetime.datetime.utcnow().isoformat()
             result = collection.delete_many({
-                'date_expires': {'$lt': current_date}
+                'valid_until': {'$lt': current_date}
             })
             self.stdout.write(self.style.SUCCESS(f'Removed {result.deleted_count} expired offers'))
             
@@ -243,28 +259,29 @@ class Command(BaseCommand):
         if active_only:
             current_date = datetime.datetime.utcnow().isoformat()
             query['$or'] = [
-                {'date_expires': {'$gt': current_date}},
-                {'date_expires': None}
+                {'valid_until': {'$exists': False}},
+                {'valid_until': None},
+                {'valid_until': {'$gt': current_date}}
             ]
             
         if expired_only:
             current_date = datetime.datetime.utcnow().isoformat()
-            query['date_expires'] = {'$lt': current_date}
+            query['valid_until'] = {'$lt': current_date}
             
         if code_filter:
             # Use regex for partial matching
-            query['code'] = {'$regex': f'.*{code_filter}.*', '$options': 'i'}
+            query['coupon_code'] = {'$regex': f'.*{code_filter}.*', '$options': 'i'}
             
         if min_amount is not None:
-            query['amount'] = query.get('amount', {})
-            query['amount']['$gte'] = min_amount
+            query['price'] = query.get('price', {})
+            query['price']['$gte'] = min_amount
             
         if max_amount is not None:
-            query['amount'] = query.get('amount', {})
-            query['amount']['$lte'] = max_amount
+            query['price'] = query.get('price', {})
+            query['price']['$lte'] = max_amount
             
         if discount_type:
-            query['discount_type'] = discount_type
+            query['price_type'] = discount_type
             
         # Get offers
         offers = Coupon.find(query)
@@ -284,52 +301,23 @@ class Command(BaseCommand):
             # Table format
             self.stdout.write(f"Found {len(offers)} offers:")
             self.stdout.write("-" * 100)
-            self.stdout.write(f"{'CODE':<15} | {'AMOUNT':<8} | {'TYPE':<12} | {'EXPIRES':<20} | {'DESCRIPTION':<30}")
+            self.stdout.write(f"{'CODE':<15} | {'PRICE':<8} | {'TYPE':<12} | {'EXPIRES':<20} | {'TITLE':<30}")
             self.stdout.write("-" * 100)
             
             for offer in offers:
-                expires = offer.get('date_expires', 'Never')
+                expires = offer.get('valid_until', 'Never')
                 if isinstance(expires, str) and len(expires) > 10:
                     # Truncate ISO format to just the date part
                     expires = expires.split('T')[0]
                     
-                description = offer.get('description', '')
-                if description and len(description) > 30:
-                    description = description[:27] + '...'
+                title = offer.get('title', '')
+                if title and len(title) > 30:
+                    title = title[:27] + '...'
                     
                 self.stdout.write(
-                    f"{offer.get('code', 'N/A'):<15} | "
-                    f"{offer.get('amount', 0):<8} | "
-                    f"{offer.get('discount_type', 'N/A'):<12} | "
+                    f"{offer.get('coupon_code', 'N/A'):<15} | "
+                    f"{offer.get('price', 0):<8} | "
+                    f"{offer.get('price_type', 'N/A'):<12} | "
                     f"{expires:<20} | "
-                    f"{description:<30}"
+                    f"{title:<30}"
                 )
-
-    def _convert_csv_types(self, row):
-        """Convert CSV string values to appropriate types"""
-        converted = {}
-        
-        for key, value in row.items():
-            if not value:  # Skip empty values
-                continue
-                
-            # Convert common fields to their appropriate types
-            if key == 'id':
-                converted[key] = int(value)
-            elif key in ['amount', 'minimum_amount', 'maximum_amount']:
-                converted[key] = float(value)
-            elif key in ['usage_count', 'usage_limit', 'usage_limit_per_user', 'limit_usage_to_x_items']:
-                if value:  # Only convert if not empty
-                    converted[key] = int(value)
-            elif key in ['individual_use', 'free_shipping', 'exclude_sale_items']:
-                converted[key] = value.lower() in ['true', 'yes', '1']
-            elif key in ['product_ids', 'excluded_product_ids', 'product_categories', 
-                        'excluded_product_categories', 'email_restrictions', 'used_by']:
-                # Convert comma-separated lists
-                if value:
-                    converted[key] = [item.strip() for item in value.split(',')]
-            else:
-                # Keep other values as strings
-                converted[key] = value
-                
-        return converted 

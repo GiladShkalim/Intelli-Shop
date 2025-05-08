@@ -4,6 +4,7 @@ from django.conf import settings
 import os
 import json
 import logging
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -118,4 +119,82 @@ class Command(BaseCommand):
                     self.stdout.write(f'  - {error}')
                 
                 if len(results["errors"]) > 10:
-                    self.stdout.write(f'  ... and {len(results["errors"]) - 10} more errors') 
+                    self.stdout.write(f'  ... and {len(results["errors"]) - 10} more errors')
+    
+    def get_available_files(self):
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        data_dir = os.path.join(base_dir, 'intellishop', 'data')
+        
+        # Add fallback paths
+        if not os.path.exists(data_dir):
+            alternative_paths = [
+                os.path.join(base_dir, 'data'),
+                os.path.join(os.path.dirname(base_dir), 'intellishop', 'data')
+            ]
+            
+            for alt_path in alternative_paths:
+                if os.path.exists(alt_path):
+                    data_dir = alt_path
+                    self.stdout.write(f"Using alternative data directory: {data_dir}")
+                    break
+        
+        available_files = []
+        
+        if os.path.exists(data_dir):
+            for file in os.listdir(data_dir):
+                if file.endswith('.json') or file.endswith('.csv'):
+                    available_files.append(os.path.join(data_dir, file))
+        
+        return available_files 
+
+def ensure_data_directory():
+    """
+    Ensures that the data directory exists with the required structure.
+    Creates it if it doesn't exist.
+    """
+    # Get the base path of the intellishop application
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(base_dir, 'data')
+    
+    # Create the data directory if it doesn't exist
+    if not os.path.exists(data_dir):
+        try:
+            os.makedirs(data_dir, exist_ok=True)
+            logger.info(f"Created data directory: {data_dir}")
+        except Exception as e:
+            logger.error(f"Failed to create data directory: {e}")
+            return False
+    
+    # Check if sample files exist in the data directory
+    sample_files_missing = True
+    for filename in ['sample_offers.csv', 'coupon_samples.json']:
+        if os.path.exists(os.path.join(data_dir, filename)):
+            sample_files_missing = False
+            break
+    
+    # If sample files are missing, try to copy them from distribution
+    if sample_files_missing:
+        try:
+            # Try different possible locations
+            potential_sources = [
+                # From project root
+                os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(base_dir))), 'data'),
+                # From Django project root
+                os.path.join(os.path.dirname(base_dir), 'data'),
+                # From current working directory
+                os.path.join(os.getcwd(), 'data')
+            ]
+            
+            for source_dir in potential_sources:
+                if os.path.exists(source_dir):
+                    for filename in os.listdir(source_dir):
+                        if filename.endswith('.json') or filename.endswith('.csv'):
+                            src_file = os.path.join(source_dir, filename)
+                            dst_file = os.path.join(data_dir, filename)
+                            shutil.copy2(src_file, dst_file)
+                            logger.info(f"Copied sample file from {src_file} to {dst_file}")
+                    break
+        except Exception as e:
+            logger.error(f"Failed to copy sample files: {e}")
+    
+    return os.path.exists(data_dir)

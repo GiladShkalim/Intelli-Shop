@@ -1,5 +1,11 @@
-code,amount,discount_type,description,date_created,date_expires,usage_count,individual_use,usage_limit,free_shipping,exclude_sale_items,minimum_amount,maximum_amount,product_categories
-SUMMER25,25,percent,Summer sale discount,2023-06-01T00:00:00,2023-12-31T23:59:59,0,true,100,false,true,50,0,summer,apparel
-WELCOME10,10,percent,New customer welcome discount,2023-06-01T00:00:00,2023-12-31T23:59:59,0,true,1,true,false,0,0,
-FREESHIP,0,percent,Free shipping on all orders,2023-06-01T00:00:00,2023-12-31T23:59:59,0,false,0,true,false,0,0,
-FLASH50,50,percent,Flash sale - 50% off,2023-06-01T00:00:00,2023-06-30T23:59:59,0,true,50,false,false,0,0,electronics,accessories 
+discount_id,title,price,price_type,description,image_link,discount_link,terms_and_conditions,club_name,category,valid_until,usage_limit,coupon_code
+a323b77f0ebd456e9d6ca697,Special Offer 1,11.29,percentage,This is a percentage coupon number 1.,https://example.com/images/coupon1.png,https://example.com/offer1,Valid until 2025-08-19. Use as per terms.,Remote,Travel and Vacation,2025-05-30,213,CODE001
+34f8978676d34cb390e600e9,Special Offer 2,5.0,Cost,This is a Cost coupon number 2.,https://example.com/images/coupon2.png,https://example.com/offer2,Valid until 2026-01-21. Use as per terms.,Homeowner,Insurance,2026-01-02,968,CODE002
+a3b17082b35844a084f0b86f,Special Offer 3,12.33,percentage,This is a percentage coupon number 3.,https://example.com/images/coupon3.png,https://example.com/offer3,Valid until 2026-01-10. Use as per terms.,Young,Finance and Banking,2025-11-20,788,CODE003
+f047c352174d4d5695dd35c4,Special Offer 4,6.0,Cost,This is a Cost coupon number 4.,https://example.com/images/coupon4.png,https://example.com/offer4,Valid until 2025-09-03. Use as per terms.,Traveler,Travel and Vacation,2025-09-28,792,CODE004
+b8a3a8f5a5c54d1b8e6d5c8d,Special Offer 5,29.12,fixed_amount,This is a fixed amount coupon number 5.,https://example.com/images/coupon5.png,https://example.com/offer5,Valid until 2025-06-06. Use as per terms.,Tech,Consumerism,2025-06-07,477,CODE005
+e2e1c9b2e1d04f6a9f1e6c3c,Special Offer 6,5.0,buy_one_get_one,This is a buy one get one coupon number 6.,https://example.com/images/coupon6.png,https://example.com/offer6,Valid until 2025-08-13. Use as per terms.,Fitness,Culture and Leisure,2025-07-09,720,CODE006
+a7e8b8f3e8e94c1e9e2d5c7f,Special Offer 7,33.47,fixed_amount,This is a fixed amount coupon number 7.,https://example.com/images/coupon7.png,https://example.com/offer7,Valid until 2025-09-10. Use as per terms.,Senior,Cars,2025-06-04,646,CODE007
+d5f3c2e1b8d84c7e8a1b6c5a,Special Offer 8,0.0,buy_one_get_one,This is a buy one get one coupon number 8.,https://example.com/images/coupon8.png,https://example.com/offer8,Valid until 2025-06-17. Use as per terms.,Pets,Consumerism,2025-07-06,258,CODE008
+e8b2c3a1d7e74f8b9e1d7c6b,Special Offer 9,0.85,percentage,This is a percentage coupon number 9.,https://example.com/images/coupon9.png,https://example.com/offer9,Valid until 2025-08-22. Use as per terms.,Student,Finance and Banking,2025-09-02,384,CODE009
+c1d2e3f4a5b647e8a9b1c2d3,Special Offer 10,18.56,fixed_amount,This is a fixed amount coupon number 10.,https://example.com/images/coupon10.png,https://example.com/offer10,Valid until 2025-10-14. Use as per terms.,Family,Insurance,2025-11-02,395,CODE010

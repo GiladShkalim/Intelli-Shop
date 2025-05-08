@@ -1,0 +1,131 @@
+{% extends 'intellishop/index_home_original.html' %}
+
+{% block content %}
+<!-- Debug info -->
+<div style="display: none;">
+    Debug: Coupon data received: {{ coupon }}
+</div>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="coupon-container text-center">
+                <h1 class="main-title mb-4">:העתיקו את קוד הקופון</h1>
+                
+                <div class="code-section mb-4">
+                    <div class="code-box">
+                        <h2 class="code-text">{{ coupon.code }}</h2>
+                    </div>
+                    <button class="copy-button" onclick="copyCode('{{ coupon.code }}')">
+                        העתיקו קוד
+                    </button>
+                </div>
+
+                <div class="discount-details">
+                    <p class="discount-text">{{ coupon.amount }} הנחה בקנייה מעל {{ coupon.minimum_amount }}₪</p>
+                </div>
+
+                <a href="https://www.aliexpress.com" class="site-link">
+                    למעבר לאתר לחצו כאן
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.coupon-container {
+    max-width: 500px;
+    margin: 0 auto;
+    direction: rtl;
+}
+
+.main-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+
+.code-section {
+    margin: 20px 0;
+}
+
+.code-box {
+    background: #fff;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.code-text {
+    font-size: 28px;
+    font-weight: bold;
+    margin: 0;
+    color: #333;
+}
+
+.copy-button {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 24px;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.copy-button:hover {
+    background: #c82333;
+}
+
+.copy-button.copied {
+    background: #28a745;
+}
+
+.discount-details {
+    margin: 20px 0;
+}
+
+.discount-text {
+    font-size: 16px;
+    color: #666;
+}
+
+.site-link {
+    display: inline-block;
+    background: #ffc107;
+    color: #000;
+    text-decoration: none;
+    padding: 12px 30px;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-top: 20px;
+}
+
+.site-link:hover {
+    background: #ffb300;
+    color: #000;
+    text-decoration: none;
+}
+</style>
+
+<script>
+function copyCode(code) {
+    navigator.clipboard.writeText(code).then(() => {
+        const btn = document.querySelector('.copy-button');
+        const originalText = btn.textContent;
+        btn.textContent = '✓ הועתק!';
+        btn.classList.add('copied');
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove('copied');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+}
+</script>
+{% endblock %} 

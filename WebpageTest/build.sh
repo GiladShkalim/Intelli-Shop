@@ -6,7 +6,8 @@
 # === USAGE INSTRUCTIONS ===
 # How to run:
 #   1. Make this script executable: chmod +x build.sh
-#   2. Run the script in WSL terminal: ./build.sh
+#   2. Run the script in WSL terminal: ./build.sh [1]
+#      - Add "1" parameter to update the database with sample data
 #
 # How to close:
 #   - Press Ctrl+C in the terminal to stop the server
@@ -256,32 +257,6 @@ class MongoDBModel:
     def delete_one(cls, query):
         """Delete a document from the collection"""
         return cls.get_collection().delete_one(query)
-
-# Example model for product data
-class Product(MongoDBModel):
-    collection_name = 'products'
-    
-    @classmethod
-    def create_product(cls, name, description, price, category, image_url=None):
-        """Create a new product"""
-        product_data = {
-            'name': name,
-            'description': description,
-            'price': price,
-            'category': category,
-            'image_url': image_url
-        }
-        return cls.insert_one(product_data)
-    
-    @classmethod
-    def get_by_category(cls, category):
-        """Get products by category"""
-        return cls.find({'category': category})
-    
-    @classmethod
-    def get_by_id(cls, product_id):
-        """Get a product by its ID"""
-        return cls.find_one({'_id': ObjectId(product_id)})
 EOF
         log "Created MongoDB models file at $MONGODB_MODELS_FILE"
     else
@@ -448,7 +423,7 @@ test_mongodb_connection || log "Warning: MongoDB connection test failed. The app
 # Check if port is already in use
 if check_port_in_use $PORT; then
     log "Warning: Port $PORT is already in use"
-    pid=$(lsof -t -i:$PORT 2>/dev/null || true)
+    pid=$(lsof -i:$PORT 2>/dev/null || true)
     if [ -n "$pid" ]; then
         log "Process $pid is using port $PORT"
         read -p "Do you want to kill this process and free the port? (y/n) " -n 1 -r
@@ -474,6 +449,19 @@ python manage.py collectstatic --noinput || log "Warning: Static file collection
 # Check for Django configuration errors
 log "Checking for configuration errors"
 python manage.py check --deploy || log "Warning: Django deployment checks failed"
+
+# Check if database update was requested
+if [ "$1" = "1" ]; then
+    log "Database update requested. Running update script..."
+    python update_database.py
+    if [ $? -ne 0 ]; then
+        log "⚠️ Database update failed!"
+    else
+        log "✅ Database updated successfully!"
+    fi
+else
+    log "Skipping database update. Run with './build.sh 1' to update the database."
+fi
 
 # Start the Django development server
 log "Please wait for Django to start on port $PORT"

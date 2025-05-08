@@ -33,17 +33,7 @@
                     <td>{{ user.password }}</td>
                     <td>
                         {% for status in user.status %}
-                            <span class="badge status-badge 
-                                {% if status == 'Student' %}bg-primary
-                                {% elif status == 'Parent' %}bg-success
-                                {% elif status == 'Military/Veteran' %}bg-danger
-                                {% elif status == 'Digital Nomad' %}bg-info
-                                {% elif status == 'First-time Buyer' %}bg-warning
-                                {% elif status == 'Retiree' %}bg-secondary
-                                {% elif status == 'Single' %}bg-pink
-                                {% elif status == 'Renter' %}bg-purple
-                                {% elif status == 'Homeowner' %}bg-teal
-                                {% else %}bg-dark{% endif %}">
+                            <span class="badge status-badge {% if status == 'Student' %}bg-primary{% elif status == 'Parent' %}bg-success{% elif status == 'Military/Veteran' %}bg-danger{% elif status == 'Digital Nomad' %}bg-info{% elif status == 'First-time Buyer' %}bg-warning{% elif status == 'Retiree' %}bg-secondary{% elif status == 'Single' %}bg-pink{% elif status == 'Renter' %}bg-purple{% elif status == 'Homeowner' %}bg-teal{% else %}bg-dark{% endif %}">
                                 {{ status }}
                             </span>
                         {% endfor %}
@@ -52,12 +42,7 @@
                     <td>{{ user.location }}</td>
                     <td>
                         {% for hobby in user.hobbies %}
-                            <span class="badge hobby-badge 
-                                {% if hobby == 'lifestyle' %}bg-lifestyle
-                                {% elif hobby == 'electronics' %}bg-electronics
-                                {% elif hobby == 'home' %}bg-home
-                                {% elif hobby == 'books' %}bg-books
-                                {% else %}bg-secondary{% endif %}">
+                            <span class="badge hobby-badge {% if hobby == 'lifestyle' %}bg-lifestyle{% elif hobby == 'electronics' %}bg-electronics{% elif hobby == 'home' %}bg-home{% elif hobby == 'books' %}bg-books{% else %}bg-secondary{% endif %}">
                                 {{ hobby }}
                             </span>
                         {% endfor %}

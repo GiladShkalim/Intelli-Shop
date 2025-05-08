@@ -39,7 +39,7 @@ class Command(BaseCommand):
         # Build query
         query = {}
         if codes:
-            query['code'] = {'$in': codes}
+            query['coupon_code'] = {'$in': codes}
             
         # Get offers from database
         offers = list(collection.find(query))
@@ -55,32 +55,34 @@ class Command(BaseCommand):
         percent_offers = 0
         fixed_cart_offers = 0
         fixed_product_offers = 0
+        bogo_offers = 0
         offer_by_codes = {}
         
         current_date = datetime.datetime.utcnow().isoformat()
         
         for offer in offers:
-            # Count by status
-            if 'date_expires' not in offer or offer['date_expires'] is None or offer['date_expires'] > current_date:
-                active_offers += 1
+            # Check expiration status
+            if 'valid_until' in offer and offer['valid_until']:
+                if offer['valid_until'] < current_date:
+                    expired_offers += 1
+                else:
+                    active_offers += 1
             else:
-                expired_offers += 1
+                active_offers += 1
                 
-            # Count by type
-            if offer.get('free_shipping', False):
-                free_shipping_offers += 1
-                
-            discount_type = offer.get('discount_type')
-            if discount_type == 'percent':
+            # Track by price type
+            price_type = offer.get('price_type')
+            if price_type == 'percentage':
                 percent_offers += 1
-            elif discount_type == 'fixed_cart':
+            elif price_type == 'fixed_amount':
                 fixed_cart_offers += 1
-            elif discount_type == 'fixed_product':
-                fixed_product_offers += 1
-                
+            elif price_type == 'buy_one_get_one':
+                # New counter for new type
+                bogo_offers = bogo_offers + 1 if 'bogo_offers' in locals() else 1
+
             # Track by code
-            if offer.get('code'):
-                offer_by_codes[offer['code']] = offer
+            if offer.get('coupon_code'):
+                offer_by_codes[offer['coupon_code']] = offer
         
         # Use sample files if requested
         if sample_files:
@@ -115,15 +117,15 @@ class Command(BaseCommand):
                             
                             # Check which codes are missing from DB
                             for item in data:
-                                if 'code' in item and item['code'] not in offer_by_codes:
+                                if 'coupon_code' in item and item['coupon_code'] not in offer_by_codes:
                                     missing_from_db.append({
-                                        'code': item['code'],
+                                        'code': item['coupon_code'],
                                         'source': file_path
                                     })
                         else:
-                            if 'code' in data and data['code'] not in offer_by_codes:
+                            if 'coupon_code' in data and data['coupon_code'] not in offer_by_codes:
                                 missing_from_db.append({
-                                    'code': data['code'],
+                                    'code': data['coupon_code'],
                                     'source': file_path
                                 })
                             source_file_data[file_path] = [data]
@@ -203,23 +205,23 @@ class Command(BaseCommand):
             if show_details and not count_only:
                 self.stdout.write("\n=== OFFER DETAILS ===")
                 self.stdout.write("-" * 100)
-                self.stdout.write(f"{'CODE':<15} | {'AMOUNT':<8} | {'TYPE':<12} | {'EXPIRES':<20} | {'DESCRIPTION':<30}")
+                self.stdout.write(f"{'CODE':<15} | {'PRICE':<8} | {'TYPE':<12} | {'EXPIRES':<20} | {'TITLE':<30}")
                 self.stdout.write("-" * 100)
                 
                 for offer in offers:
-                    expires = offer.get('date_expires', 'Never')
+                    expires = offer.get('valid_until', 'Never')
                     if isinstance(expires, str) and len(expires) > 10:
                         # Truncate ISO format to just the date part
                         expires = expires.split('T')[0]
                         
-                    description = offer.get('description', '')
-                    if description and len(description) > 30:
-                        description = description[:27] + '...'
+                    title = offer.get('title', '')
+                    if title and len(title) > 30:
+                        title = title[:27] + '...'
                         
                     self.stdout.write(
-                        f"{offer.get('code', 'N/A'):<15} | "
-                        f"{offer.get('amount', 0):<8} | "
-                        f"{offer.get('discount_type', 'N/A'):<12} | "
+                        f"{offer.get('coupon_code', 'N/A'):<15} | "
+                        f"{offer.get('price', 0):<8} | "
+                        f"{offer.get('price_type', 'N/A'):<12} | "
                         f"{expires:<20} | "
-                        f"{description:<30}"
+                        f"{title:<30}"
                     ) 

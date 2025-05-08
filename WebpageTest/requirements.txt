@@ -35,3 +35,6 @@ pyyaml>=6.0.1
 
 # Schema validation
 jsonschema==4.20.0
+
+# Date/time handling
+python-dateutil==2.8.2

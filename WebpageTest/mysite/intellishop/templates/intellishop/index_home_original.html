@@ -51,6 +51,32 @@
         .nav-link:hover {
             color: #198754 !important;  /* Bootstrap success color */
         }
+        body.night-mode {
+            background-color: #000 !important;
+            color: #e0e0e0 !important;
+        }
+        body.night-mode .navbar,
+        body.night-mode .dropdown-menu,
+        body.night-mode .card,
+        body.night-mode .user-welcome,
+        body.night-mode .modal-content {
+            background-color: #121212 !important;
+            color: #e0e0e0 !important;
+        }
+        body.night-mode .navbar,
+        body.night-mode .navbar .nav-link,
+        body.night-mode .navbar .navbar-brand,
+        body.night-mode .navbar .bi,
+        body.night-mode .navbar .dropdown-toggle,
+        body.night-mode .navbar .dropdown-item {
+            color: #f8f9fa !important;
+        }
+        body.night-mode .navbar .nav-link:hover,
+        body.night-mode .navbar .dropdown-item:hover,
+        body.night-mode .navbar .dropdown-item:focus {
+            color: #ffc107 !important;
+            background-color: #23272b !important;
+        }
     </style>
 </head>
 <body>
@@ -64,6 +90,7 @@
             </a>
             
             <!-- Search form -->
+            <!--
             <div class="d-flex mx-auto">
                 <form class="d-flex position-relative">
                     <input class="form-control me-2" type="search" placeholder="Search for products..." aria-label="Search" id="search-input">
@@ -72,6 +99,7 @@
                     </button>
                 </form>
             </div>
+            -->
             
             <!-- Navbar toggle button for mobile -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -94,9 +122,17 @@
                             <i class="bi bi-person"></i>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="account-link">
-                            <li><a class="dropdown-item text-success" href="{% url 'login' %}">Sign In</a></li>
-                            <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">Sign Out</a></li>
+                            {% if request.session.user_id %}
+                                <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">Sign Out</a></li>
+                            {% else %}
+                                <li><a class="dropdown-item text-success" href="{% url 'login' %}">Sign In</a></li>
+                            {% endif %}
                         </ul>
+                    </li>
+                    <li class="nav-item">
+                        <button id="night-mode-toggle" class="btn btn-outline-dark ms-2" title="Toggle Night Mode">
+                            <i class="bi bi-moon"></i>
+                        </button>
                     </li>
                 </ul>
             </div>
@@ -107,7 +143,7 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-top border-bottom">
         <div class="container">
             <!-- Home Button -->
-            <a href="{% url 'index' %}" class="btn btn-success me-3" id="home-btn">
+            <a href="{% url 'index_home' %}" class="btn btn-success me-3" id="home-btn">
                 <i class="bi bi-house-door me-2"></i> Home
             </a>
             
@@ -215,6 +251,178 @@
         </div>
     </nav>
 
+    <!-- User Welcome Section -->
+    {% if request.path == '/home/' %}
+    <div class="container mt-4">
+        <div class="user-welcome p-4 bg-light rounded shadow-sm mb-4">
+            <h2>Welcome!</h2>
+            <div class="user-details">
+                <p class="email"><strong>Email:</strong> {{ user.email }}</p>
+                <div class="status-section">
+                    <strong>Status:</strong>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for status in user.status %}
+                        <span class="badge 
+                            {% if status == 'Student' %}bg-primary
+                            {% elif status == 'Parent' %}bg-success
+                            {% elif status == 'Military/Veteran' %}bg-danger
+                            {% elif status == 'Digital Nomad' %}bg-info
+                            {% elif status == 'First-time Buyer' %}bg-warning
+                            {% elif status == 'Retiree' %}bg-secondary
+                            {% elif status == 'Single' %}bg-pink
+                            {% elif status == 'Renter' %}bg-purple
+                            {% elif status == 'Homeowner' %}bg-teal
+                            {% else %}bg-dark{% endif %}">
+                            {{ status }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="hobbies-section mt-2">
+                    <strong>Interests:</strong>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for hobby in user.hobbies %}
+                        <span class="badge 
+                            {% if hobby == 'lifestyle' %}bg-lifestyle
+                            {% elif hobby == 'electronics' %}bg-electronics
+                            {% elif hobby == 'home' %}bg-home
+                            {% elif hobby == 'books' %}bg-books
+                            {% else %}bg-secondary{% endif %}">
+                            {{ hobby }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtered Coupons Header -->
+        <div class="text-center mb-4">
+            <h2>Recommended Vouchers/Benefits Based on Your Profile</h2>
+            <p class="text-muted">[Updated 2025]</p>
+            <p>We've collected all available coupons matching your status and interests.</p>
+        </div>
+
+        <!-- Filtered Coupons List -->
+        <div class="row">
+            {% for coupon in filtered_coupons %}
+            <div class="col-12 mb-3">
+                <div class="card">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="store-logo me-3">
+                                {% if coupon.store_logo %}
+                                <img src="{{ coupon.store_logo }}" alt="{{ coupon.store_name }} Logo" style="width: 60px; height: 60px; object-fit: contain;">
+                                {% else %}
+                                <div class="placeholder-logo">
+                                    <i class="bi bi-shop"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h5 class="card-title mb-1">{{ coupon.name }} Coupon [Updated 2025]</h5>
+                                <p class="card-text text-warning mb-1 fw-bold">{{ coupon.amount }}</p>
+                                <p class="text-muted mb-1">{{ coupon.description }}</p>
+                                <small class="text-muted">Expires: {{ coupon.date_expires|date:"d/m/Y" }}</small>
+                                {% if coupon.minimum_amount > 0 %}
+                                <br>
+                                <small class="text-muted">Minimum purchase: ${{ coupon.minimum_amount }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <button class="btn btn-outline-secondary me-2" title="Save for later">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary me-2" title="Share">
+                                <i class="bi bi-share"></i>
+                            </button>
+                            <a href="{% url 'coupon_code' code=coupon.code %}" class="btn btn-primary me-2">Acquire</a>
+                            <a href="{{ coupon.store_url }}" target="_blank" class="btn btn-dark">Go To Website</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <style>
+    /* Status and hobby badge styles (reused from dashboard) */
+    .bg-lifestyle { background-color: #20c997; }
+    .bg-electronics { background-color: #0dcaf0; }
+    .bg-home { background-color: #6f42c1; }
+    .bg-books { background-color: #fd7e14; }
+    .bg-pink { background-color: #e83e8c; }
+    .bg-purple { background-color: #6f42c1; }
+    .bg-teal { background-color: #20c997; }
+
+    .user-welcome {
+        background: linear-gradient(to right, #f8f9fa, #ffffff);
+        border-left: 4px solid #28a745;
+    }
+
+    .gap-2 {
+        gap: 0.5rem !important;
+    }
+
+    /* Coupon card styles */
+    .card {
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .btn-dark {
+        background-color: #1a237e;
+        border-color: #1a237e;
+    }
+
+    .text-warning {
+        color: #ffc107 !important;
+        font-size: 1.1rem;
+    }
+
+    .placeholder-logo {
+        width: 60px;
+        height: 60px;
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+    }
+
+    .store-logo img {
+        border-radius: 8px;
+    }
+
+    @media (max-width: 768px) {
+        .card-body {
+            flex-direction: column;
+            align-items: start !important;
+        }
+        
+        .d-flex.align-items-center:last-child {
+            margin-top: 1rem;
+            width: 100%;
+            justify-content: space-between;
+        }
+    }
+    </style>
+    {% endif %}
+
     <!-- Main Content Area -->
     {% block content %}
     <style>
@@ -265,6 +473,27 @@
                 }
             });
         });
+    </script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('night-mode-toggle');
+        const body = document.body;
+
+        // Load preference
+        if (localStorage.getItem('nightMode') === 'on') {
+            body.classList.add('night-mode');
+        }
+
+        toggleBtn.addEventListener('click', function() {
+            body.classList.toggle('night-mode');
+            if (body.classList.contains('night-mode')) {
+                localStorage.setItem('nightMode', 'on');
+            } else {
+                localStorage.setItem('nightMode', 'off');
+            }
+        });
+    });
     </script>
 </body>
 </html>

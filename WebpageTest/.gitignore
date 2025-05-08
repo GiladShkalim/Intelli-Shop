@@ -111,3 +111,8 @@ docs/api/
 
 # Keep .env.example as a template
 !.env.example
+
+# WebpageTest specific
+mysite/media/
+mysite/static/collected/
+update_results.log
