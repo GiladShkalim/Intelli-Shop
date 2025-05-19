@@ -18,7 +18,7 @@ python-dotenv==1.0.0
 # Frontend
 django-bootstrap5==23.3
 django-crispy-forms==2.1
-pillow==10.2.0
+pillow==10.3.0
 
 # Development and debugging
 black==24.2.0
