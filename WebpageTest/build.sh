@@ -47,46 +47,25 @@ cleanup() {
 # ===== MongoDB Functions =====
 
 setup_mongodb_config() {
-    log "Setting up MongoDB configuration" 1 "$SCRIPT_NAME"
-    
+    log "Setting up MongoDB configuration..."
     # Create .env file if it doesn't exist
     if [ ! -f "$ENV_FILE" ]; then
-        log "Creating new environment file $ENV_FILE" 1 "$SCRIPT_NAME"
+        log "Creating environment configuration file..."
         cat > "$ENV_FILE" << EOF
-# MongoDB Connection Settings
-MONGODB_URI=mongodb://localhost:27017/
-MONGODB_NAME=intellishop_db
+# MongoDB Configuration
+MONGODB_URI=mongodb+srv://giladshkalim:Gilad1212@intellidb.yuauj7i.mongodb.net/?retryWrites=true&w=majority&appName=IntelliDB
+MONGODB_NAME=IntelliDB
 
-# Application Settings
-DEBUG=True
+# Django Settings
 SECRET_KEY=your-secret-key-here
+DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 EOF
-        log "Created environment file with default settings" 1 "$SCRIPT_NAME"
-    else
-        log "Environment file $ENV_FILE already exists" 1 "$SCRIPT_NAME"
+        log "Created environment template at $ENV_FILE"
     fi
     
     # Load environment variables
-    log "Loading configuration from $ENV_FILE" 1 "$SCRIPT_NAME"
-    if [ -f "$ENV_FILE" ]; then
-        # Export environment variables properly - only export valid variable assignments
-        while IFS= read -r line || [ -n "$line" ]; do
-            # Skip comments and empty lines
-            if [[ $line =~ ^[[:space:]]*# || -z $line ]]; then
-                continue
-            fi
-            
-            # Only export if line contains a valid KEY=VALUE format (no spaces around =)
-            if [[ $line =~ ^[A-Za-z0-9_]+=.* ]]; then
-                export "$line" || log "Warning: Failed to export environment variable: $line" 0 "$SCRIPT_NAME"
-            else
-                log "Warning: Skipping invalid environment variable: $line" 0 "$SCRIPT_NAME"
-            fi
-        done < "$ENV_FILE"
-    else
-        log "⚠️  $ENV_FILE file not found. MongoDB connection may fail." 0 "$SCRIPT_NAME"
-    fi
+    source "$ENV_FILE"
 }
 
 # Test MongoDB connection
@@ -317,6 +296,27 @@ run_enhancement_process() {
     fi
 }
 
+# Add port checking function if it's not already in common.sh
+check_port_in_use() {
+    local port=$1
+    
+    # Try different commands based on what's available
+    if command -v netstat &>/dev/null; then
+        netstat -tuln | grep ":$port " > /dev/null 2>&1
+        return $?
+    elif command -v ss &>/dev/null; then
+        ss -tuln | grep ":$port " > /dev/null 2>&1
+        return $?
+    elif command -v lsof &>/dev/null; then
+        lsof -i :$port > /dev/null 2>&1
+        return $?
+    else
+        # If no tool is available, we can't check - assume it's not in use
+        log "Warning: Cannot check if port is in use (netstat, ss, and lsof not found)" 0 "$SCRIPT_NAME"
+        return 1
+    fi
+}
+
 # Set up trap for cleanup on script exit - pass the signal type to cleanup
 trap 'cleanup EXIT' EXIT
 trap 'cleanup INT' INT
@@ -506,4 +506,53 @@ fi
 
 log "Build process completed successfully!" 1 "$SCRIPT_NAME"
 
-# The cleanup function will be called automatically through the trap 
+# Start Django server section
+PORT=8000
+
+# Check if port is already in use
+if check_port_in_use $PORT; then
+    log "Warning: Port $PORT is already in use" 0 "$SCRIPT_NAME"
+    # Get the process ID using the port
+    if command -v lsof &>/dev/null; then
+        pid=$(lsof -t -i:$PORT 2>/dev/null || true)
+    elif command -v netstat &>/dev/null && command -v grep &>/dev/null && command -v awk &>/dev/null; then
+        pid=$(netstat -nlp 2>/dev/null | grep ":$PORT " | awk '{print $7}' | cut -d'/' -f1)
+    fi
+    
+    if [ -n "$pid" ]; then
+        log "Process $pid is using port $PORT" 0 "$SCRIPT_NAME"
+        read -p "Do you want to kill this process and free the port? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            log "Killing process $pid" 1 "$SCRIPT_NAME"
+            kill -9 $pid || log "Failed to kill process $pid" 0 "$SCRIPT_NAME"
+            sleep 2
+        else
+            error "Port $PORT is in use. Please free the port or use a different one." "$SCRIPT_NAME"
+        fi
+    fi
+fi
+
+# Before starting server, remove the automatic cleanup traps
+trap - EXIT 
+trap - TERM
+
+# Only clean up on explicit interrupt (Ctrl+C)
+trap 'log "Caught interrupt signal. Shutting down server..." 1 "$SCRIPT_NAME"; cleanup INT' INT
+
+# Improve server startup with clear error messages
+start_django_server() {
+    log "Starting Django server on port $PORT"
+    # Check for pending migrations first
+    python manage.py makemigrations --check
+    python manage.py migrate
+    
+    # Start the server with verbose output to catch errors
+    python manage.py runserver 0.0.0.0:$PORT --traceback
+}
+
+# Add this near the end of your script, replacing the existing server start code
+start_django_server
+
+# Only run cleanup if we get here (server explicitly stopped)
+cleanup
